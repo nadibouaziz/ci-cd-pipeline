@@ -6,7 +6,7 @@ An idea would be to create all your common actions into one repo and do somethin
 
 ```yml
   - name: Set up XXX
-  uses: ./global-common-actions-git/actions/setup-gcp-gar-npm-config
+  uses: ./global-common-actions-git/actions/setup-gcp-npm-config-wip
   with:
     project-id: ${{ secrets.GCP_PROJECT_ID }}
     region: ${{ secrets.GCP_PROJECT_ID }}
