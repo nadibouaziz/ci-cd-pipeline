@@ -1,0 +1,21 @@
+name: Set up NPM config
+description: Set up basic config to pull package private repository on git
+
+inputs:
+  private-access-token:
+    description: Github Private Access Token to access your organization private registry
+    required: true
+  organization-name: 
+    description: Name of your organization
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Set NODE_AUTH_TOKEN
+      shell: bash
+      run: |
+        cat << EOF > .npmrc
+          //npm.pkg.github.com/:_authToken=${{ inputs.private-access-token }}
+          @${{ inputs.organization-name }}:registry=https://npm.pkg.github.com/
+        EOF

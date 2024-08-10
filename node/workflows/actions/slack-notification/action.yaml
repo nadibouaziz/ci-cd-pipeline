@@ -1,0 +1,20 @@
+name: Slack Notification
+description: Send Notification to Slack Channels
+
+inputs:
+  slack-message:
+    description: Slack Message for notification
+    required: true
+  slack-webhook-url:
+    description: Slack Incoming Webhook URL
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Slack Notification
+      uses: rtCamp/action-slack-notify@v2
+      env:
+        SLACK_WEBHOOK: ${{ inputs.slack-webhook-url }}
+        SLACK_COLOR: ${{ job.status }}
+        SLACK_MESSAGE: ${{ inputs.slack-message }}

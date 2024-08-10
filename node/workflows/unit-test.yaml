@@ -1,0 +1,83 @@
+name: Unit test
+on:
+  workflow_call:
+    # all secrets required for your pipeline
+    secrets:
+      GCP_PROJECT_ID:
+        required: true
+      PRIVATE_PACKAGE_INSTALL_TOKEN:
+        required: true
+      SLACK_WEBHOOK_URL:
+        required: true
+  pull_request:
+
+jobs:
+  test:
+    name: Test App
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # all your required Services
+    services:
+      postgres:
+        image: postgres:13
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 54328:5432
+        env:
+          POSTGRES_PASSWORD: docker
+          POSTGRES_USER: docker
+          POSTGRES_DB: my-database
+      redis:
+        image: redis:6
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 63799:6379
+    # all your env variables required for your app
+    env:
+      DATABASE_URL: "postgresql://docker:docker@localhost:54328/my-database"
+      NODE_ENV: development
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .npmrc
+        uses: ./.github/actions/setup-node-config
+        with:
+          private-access-token: ${{secrets.PRIVATE_PACKAGE_INSTALL_TOKEN}}
+
+      - name: Setup Node.js - Cache dependencies - Install dependencies
+        uses: ./.github/workflows/setup-node
+
+      # setup npm config, if you have to pull packages from private repository from GCP
+      - name: Set up NPM config
+        uses: ./.github/actions/setup-gcp-gar-npm-config
+        with:
+          project-id: ${{ secrets.GCP_PROJECT_ID }}
+          region: ${{ secrets.GCP_REGION }}
+          repository-name: ${{ secrets.GCP_REPO_NAME }}
+          service-account: ${{ secrets.SERVICE_ACCOUNT }}
+          scope: ${{ secrets.GCP_SCOPE }}
+          workload-identity-provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
+
+      # Npm commands to execute to run your tests
+      - name: Setup Test Env
+        run: |
+          npm run db:setup:test
+          npm run build
+
+      - name: Run Test
+        run: npm test
+
+      - name: Slack Notification
+        if: ${{ failure() }}
+        uses: ./.github/actions/slack-notification
+        with:
+          slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}

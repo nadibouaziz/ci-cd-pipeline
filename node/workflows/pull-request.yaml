@@ -1,0 +1,43 @@
+name: Format and Build code on Pull Request
+on: [pull_request]
+
+jobs:
+  name: Test Code Style and Build
+  runs-on: ubuntu-latest
+  timeout-minutes: 10
+  steps:
+  - name: Checkout
+    uses:  actions/checkout@v4
+
+  # setup npm config, if you have to pull packages from your private repository ORGANIZATION
+  - name: Setup .npmrc with your organization
+    uses: ./.github/actions/setup-git-npm-config
+    with:
+      private-access-token: ${{secrets.PRIVATE_PACKAGE_INSTALL_TOKEN}}
+      organization-name: ${{ github.event.organization.login }}
+
+  # setup npm config, if you have to pull packages from private repository from GCP
+  - name: Set up NPM config
+    uses: ./.github/actions/setup-gcp-gar-npm-config
+    with:
+      project-id: ${{ secrets.GCP_PROJECT_ID }}
+      region: ${{ secrets.GCP_REGION }}
+      repository-name: ${{ secrets.GCP_REPO_NAME }}
+      service-account: ${{ secrets.SERVICE_ACCOUNT }}
+      scope: ${{ secrets.GCP_SCOPE }}
+      workload-identity-provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
+
+  - name: Setup Node.js - Cache dependencies - Install dependencies
+    uses: ./.github/workflows/setup-node
+
+  - name: Run Check
+    run: npm run format:check
+
+  - name: Build
+    run: npm run build
+
+  - name: Slack Notification
+    if: ${{ failure() }}
+    uses: ./.github/actions/slack-notification
+    with:
+      slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}

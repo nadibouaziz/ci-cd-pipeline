@@ -1,0 +1,33 @@
+name: Deployment
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  unit_test:
+    uses: ./.github/workflows/unit-test.yml
+    secrets:
+      PRIVATE_PACKAGE_INSTALL_TOKEN: ${{secrets.PRIVATE_PACKAGE_INSTALL_TOKEN}}
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+  deploy:
+    name: Deploying App
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: unit_test
+    env:
+      PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+      SERVICE: so-easy-app
+      REGION: asia-east1
+      IMAGE_REPO: app-repo
+    steps:
+      - name: Checkout
+        uses:  actions/checkout@v4
+
+      # TODO : Deploy on EC2 / cluster / others ? 
+
+      - name: Slack Notification
+        if: ${{ failure() }}
+        uses: ./.github/actions/slack-notification
+        with:
+          slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
